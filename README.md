@@ -1,95 +1,131 @@
-# Gin-Admin
+<h1 align="center">Gin Admin</h1>
 
-> 基于Gin + Casbin + Ant Design React 的RBAC权限管理脚手架
+<div align="center">
+ 基于 Gin + GORM + Casbin 实现的RBAC权限管理脚手架，目的是提供一套轻量的中后台开发框架，方便、快速的完成业务需求的开发。
+<br/>
 
-## 1. 快速开始
+[![ReportCard][reportcard-image]][reportcard-url] [![GoDoc][godoc-image]][godoc-url] [![License][license-image]][license-url]
 
-### 1.1 开发环境依赖
+</div>
 
-- go 1.11及以上版本
-- node 8.12.0及以上版本
-- yarn 1.12.3及以上版本
+- [在线演示地址](https://demo.tiannianshou.com) (用户名：root，密码：abc-123)（`温馨提醒：为了达到更好的演示效果，这里给出了拥有最高权限的用户，请手下留情，只操作自己新增的数据，不要动平台本身的数据！谢谢！`）
+- [Swagger 文档地址](https://demo.tiannianshou.com/swagger/)
 
-### 1.2 获取代码及初始化
+![](./screenshot_swagger.png)
 
-#### 1.2.1 拉取代码
+## 特性
 
-> 如果github源太慢，可以拉取国内源：<https://gitee.com/lyric/gin-admin.git>
+- 遵循 RESTful API 设计规范
+- 基于 Casbin 的 RBAC 访问控制模型
+- 存储分离(存储层对外采用接口的方式供业务层调用，实现了存储层的完全隔离，可以非常方便的更换存储方式)
+- 日志追踪(基于[logrus](https://github.com/sirupsen/logrus)，日志钩子支持 gorm)
+- JWT 认证(基于黑名单的认证模式，存储支持：file/redis)
+- 支持 Swagger 文档
+- 单元测试
 
-```
-git clone https://github.com/LyricTian/gin-admin.git $GOPATH/src/github.com/LyricTian/gin-admin
-```
+## 下载并运行
 
-#### 1.2.2 更改数据库配置
-
-> 编辑$GOPATH/src/github.com/LyricTian/gin-admin/config/config.toml配置文件，更改如下配置
-
-```
-# mysql数据库配置
-[mysql]
-
-# 连接地址(格式：127.0.0.1:3306)
-addr = "127.0.0.1:3306"
-# 用户名
-username = "root"
-# 密码
-password = "123456"
-# 数据库
-database = "ginadmin"
-```
-
-#### 1.2.3 创建数据库
+### 获取代码
 
 ```
-CREATE DATABASE `ginadmin` DEFAULT CHARACTER SET = `utf8mb4`;
+go get -v github.com/LyricTian/gin-admin/cmd/ginadmin
 ```
 
-#### 1.2.4 初始化数据
+### 运行
 
-- 初始化菜单数据：`$GOPATH/src/github.com/LyricTian/gin-admin/script/init_menu.sql`
+> root 用户的用户名及密码在配置文件(`configs/ginadmin/config.toml`)中，默认为：root/abc-123
 
-### 1.3 编译并运行
+#### 运行服务
 
-```
-cd $GOPATH/src/github.com/LyricTian/gin-admin
-```
+> 也可以使用脚本运行(详情可查看`Makefile`)：`make start`
 
-#### 1.3.1 编译并运行服务
-
-```
-cd cmd/server
-go build -o server
-./server -c ../../config/config.toml -m ../../config/model.conf
+```bash
+ginadmin -c ./configs/ginadmin/config.toml -m ./configs/ginadmin/model.conf -swagger ./internal/app/ginadmin/swagger
 ```
 
-#### 1.3.2 编译并运营前端
+#### 温馨提醒
+
+1. 默认配置采用的是 sqlite 数据库，数据库文件(`自动生成`)在`data/gadmin.db`。如果想切换为`mysql`或`postgres`，请更改配置文件，并创建数据库（数据库创建脚本在`script`目录下）。
+2. 日志的默认配置为标准输出，如果想切换到写入文件或写入到 gorm 存储，可以自行切换配置。
+
+## 前端实现
+
+- [gin-admin-react](https://github.com/LyricTian/gin-admin-react)：基于[Ant Design React](https://ant.design)的实现版本
+
+## Swagger 文档的使用
+
+> 文档规则请参考：[https://github.com/teambition/swaggo/wiki/Declarative-Comments-Format](https://github.com/teambition/swaggo/wiki/Declarative-Comments-Format)
+
+### 安装工具并生成文档
 
 ```
-cd web
-yarn
-yarn start
+go get -u -v github.com/teambition/swaggo
+swaggo -s ./internal/app/ginadmin/swagger.go -p . -o ./internal/app/ginadmin/swagger
 ```
 
-#### 1.3.3 用户登录
+生成文档之后，可在浏览器中输入地址访问：[http://127.0.0.1:10088/swagger/](http://127.0.0.1:10088/swagger/)
 
-> 在配置文件中可设定`system_root_user`配置项指定用户名及密码，默认用户名为：root，密码为：123
-
-### 1.4 快速打包
-
-#### 1.4.1 编译服务
+## 项目结构概览
 
 ```
-go build -ldflags "-w -s" -o server
+├── cmd
+│   └── ginadmin：主服务
+├── configs
+│   └── ginadmin：配置文件目录
+├── docs：文档
+├── internal：内部应用
+│   └── app
+│       └── ginadmin：主应用目录
+│           ├── bll：业务逻辑层
+│           ├── config：配置参数（与配置文件一一映射）
+│           ├── context：统一上下文管理
+│           ├── ginplus：gin的扩展函数库
+│           ├── middleware：gin中间件
+│           ├── model：存储层
+│           │   └── gorm
+│           │       ├── entity：与数据库映射的实体层
+│           │       └── model：gorm实现的存储层
+│           ├── routers：路由层
+│           │   └── api：/api路由模块
+│           │       └── ctl：/api路由模块对应的控制器层
+│           ├── schema：对象模型
+│           ├── swagger：swagger静态目录
+│           └── test：单元测试
+├── pkg：公共模块
+│   ├── auth：认证模块
+│   │   └── jwtauth
+│   │       └── store
+│   │           ├── buntdb
+│   │           └── redis
+│   ├── errors：错误处理模块
+│   ├── gormplus：gorm扩展实现
+│   ├── logger：日志模块
+│   │   └── hook
+│   │       └── gorm
+│   └── util：工具类
+├── scripts：执行脚本
+└── vendor：依赖包
 ```
 
-#### 1.4.2 编译前端
+## 感谢以下框架的开源支持
 
-> 打包之后的目录为：web/dist
-
-```
-yarn run build
-```
+- [Gin] - [https://gin-gonic.com/](https://gin-gonic.com/)
+- [GORM] - [http://gorm.io/](http://gorm.io/)
+- [Casbin] - [https://casbin.org/](https://casbin.org/)
 
 ## MIT License
 
-    Copyright (c) 2018 Lyric
+    Copyright (c) 2019 Lyric
+
+## 与作者对话
+
+> 该项目是利用业余时间进行开发的，开发思路主要是来源于自己的项目积累及个人思考，如果您有更好的想法和建议请与我进行沟通，我非常期待！下面是我的微信二维码：
+
+<img src="./screenshot_wechat.jpeg" width="256" height="256" />
+
+[reportcard-url]: https://goreportcard.com/report/github.com/LyricTian/gin-admin
+[reportcard-image]: https://goreportcard.com/badge/github.com/LyricTian/gin-admin
+[godoc-url]: https://godoc.org/github.com/LyricTian/gin-admin
+[godoc-image]: https://godoc.org/github.com/LyricTian/gin-admin?status.svg
+[license-url]: http://opensource.org/licenses/MIT
+[license-image]: https://img.shields.io/npm/l/express.svg
